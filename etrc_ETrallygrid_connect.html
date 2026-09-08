@@ -1,0 +1,894 @@
+<title>ETラリーゲート座標確認</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --panel: #ffffff;
+    --ink: #1b2233;
+    --muted: #6b7284;
+    --border: #dbe0ee;
+    --border-soft: #e8ebf4;
+    --grid-line: #d7dceb;
+    --cell-label: #545b70;
+    --dot-fill: #9aa1b4;
+    --dot-stroke: #ffffff;
+    --accent: #4453e8;
+    --accent-ink: #ffffff;
+    --input-bg: #ffffff;
+    --focus-ring: rgba(68, 83, 232, 0.35);
+    --accent-soft: rgba(68, 83, 232, 0.14);
+    --shadow: 0 1px 2px rgba(24, 32, 64, 0.05), 0 8px 24px rgba(24, 32, 64, 0.04);
+    --line-1: #e0393f;
+    --line-2: #2f6fed;
+    --line-3: #caa000;
+    --danger: #c62a2f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141c;
+      --panel: #1a1e2a;
+      --ink: #e8eaf3;
+      --muted: #9aa1ba;
+      --border: #2c3145;
+      --border-soft: #242838;
+      --grid-line: #2c3145;
+      --cell-label: #aab0c6;
+      --dot-fill: #6b7284;
+      --dot-stroke: #1a1e2a;
+      --accent: #8391ff;
+      --accent-ink: #12141c;
+      --input-bg: #1f2330;
+      --focus-ring: rgba(131, 145, 255, 0.35);
+      --accent-soft: rgba(131, 145, 255, 0.18);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+      --line-1: #ff6b6f;
+      --line-2: #6ea2ff;
+      --line-3: #f2c14e;
+      --danger: #ff6b6f;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12141c;
+    --panel: #1a1e2a;
+    --ink: #e8eaf3;
+    --muted: #9aa1ba;
+    --border: #2c3145;
+    --border-soft: #242838;
+    --grid-line: #2c3145;
+    --cell-label: #aab0c6;
+    --dot-fill: #6b7284;
+    --dot-stroke: #1a1e2a;
+    --accent: #8391ff;
+    --accent-ink: #12141c;
+    --input-bg: #1f2330;
+    --focus-ring: rgba(131, 145, 255, 0.35);
+    --accent-soft: rgba(131, 145, 255, 0.18);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    --line-1: #ff6b6f;
+    --line-2: #6ea2ff;
+    --line-3: #f2c14e;
+    --danger: #ff6b6f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Inter", -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    padding: 40px 20px 60px;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+  }
+
+  .field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .field {
+    display: grid;
+    grid-template-columns: auto 68px 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+
+  .field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .point-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .point-inputs .arrow {
+    color: var(--muted);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .point-inputs input[type="text"] {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 12px;
+    outline: none;
+    text-transform: uppercase;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  input[type="text"]::placeholder {
+    color: var(--muted);
+    opacity: 0.6;
+    text-transform: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  input[type="text"].is-invalid {
+    border-color: var(--line-1);
+  }
+
+  .hint {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .hint code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    background: var(--border-soft);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 11.5px;
+  }
+
+  .result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .result-heading {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+
+  .export-btn {
+    font-family: "Inter", sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .export-btn:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .export-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .export-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .reset-btn {
+    margin-top: 14px;
+    width: 100%;
+    font-family: "Inter", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--danger);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .reset-btn:hover {
+    background: var(--border-soft);
+    border-color: var(--danger);
+  }
+
+  .reset-btn:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+  }
+
+  .draw-status {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 1.6em;
+  }
+
+  .plot-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .course {
+    flex: 1 1 300px;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .course-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .course-label .course-side { color: var(--ink); }
+
+  .course svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .grid-line { stroke: var(--grid-line); stroke-width: 1; }
+
+  .cell-label {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    fill: var(--cell-label);
+  }
+
+  .plot-bar {
+    stroke: none;
+  }
+
+  .dot {
+    fill: var(--dot-fill);
+    stroke: var(--dot-stroke);
+    stroke-width: 1.5;
+  }
+
+  .dot-ring {
+    fill: none;
+    stroke-width: 2.5;
+  }
+
+  .dot-ring-pending {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-dasharray: 4 3;
+  }
+
+  .dot-hit {
+    fill: transparent;
+    pointer-events: all;
+    cursor: pointer;
+    transition: fill 0.15s ease;
+  }
+
+  .dot-hit:hover {
+    fill: var(--accent-soft);
+  }
+
+  .readout {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 16px;
+  }
+
+  .readout-row {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .readout-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .readout-coords { color: var(--ink); }
+  .readout-len { color: var(--muted); white-space: nowrap; }
+
+  .readout-row.is-empty {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+  .readout-row.is-empty .readout-coords { color: var(--muted); }
+
+  .code-output {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 16px;
+  }
+
+  .code-row {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .code-row-label {
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  input.code-row-value {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+  }
+
+  .code-hint {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .code-hint code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    background: var(--border-soft);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 11.5px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.75;
+  }
+
+  @media (max-width: 420px) {
+    .field {
+      grid-template-columns: auto 1fr;
+      row-gap: 8px;
+    }
+    .point-inputs {
+      grid-column: 1 / -1;
+    }
+  }
+</style>
+
+<div class="page">
+  <header>
+    <h1>ETラリーゲート座標確認</h1>
+    <p>5×5の格子(各セルに灰色の円、左上がG1-1、右方向にG5-1まで、下方向にG1-5まで)から、ラベルで2点を指定して線を結びます。</p>
+  </header>
+
+  <section class="panel">
+    <div class="field-list">
+      <div class="field">
+        <span class="swatch" style="background: var(--line-1);"></span>
+        <span class="field-label">ゲート1</span>
+        <div class="point-inputs">
+          <input type="text" id="set-1a" autocomplete="off" placeholder="G1-1" maxlength="6">
+          <span class="arrow">→</span>
+          <input type="text" id="set-1b" autocomplete="off" placeholder="G5-5" maxlength="6">
+        </div>
+      </div>
+      <div class="field">
+        <span class="swatch" style="background: var(--line-2);"></span>
+        <span class="field-label">ゲート2</span>
+        <div class="point-inputs">
+          <input type="text" id="set-2a" autocomplete="off" placeholder="G1-5" maxlength="6">
+          <span class="arrow">→</span>
+          <input type="text" id="set-2b" autocomplete="off" placeholder="G5-1" maxlength="6">
+        </div>
+      </div>
+      <div class="field">
+        <span class="swatch" style="background: var(--line-3);"></span>
+        <span class="field-label">ゲート3</span>
+        <div class="point-inputs">
+          <input type="text" id="set-3a" autocomplete="off" placeholder="G3-1" maxlength="6">
+          <span class="arrow">→</span>
+          <input type="text" id="set-3b" autocomplete="off" placeholder="G3-5" maxlength="6">
+        </div>
+      </div>
+    </div>
+    <p class="hint">入力形式: <code>G(列)-(行)</code> 列・行とも1〜5(例: <code>G1-1</code>は左上、<code>G5-5</code>は右下)</p>
+    <button type="button" id="reset-gates" class="reset-btn">ゲート座標をリセット</button>
+  </section>
+
+  <section class="panel">
+    <div class="result-bar">
+      <p class="result-heading">結果</p>
+      <button type="button" id="export-png" class="export-btn">画面をPNGで保存</button>
+    </div>
+    <div class="plot-wrap">
+      <div class="course">
+        <span class="course-label"><span class="course-side">Lコース</span>(入力どおり)</span>
+        <svg id="plot-l" viewBox="0 0 510 510" role="img" aria-label="Lコース: 5x5格子と入力されたラベル間の線。点をクリックして線を作成できます"></svg>
+        <p class="draw-status" id="draw-status"></p>
+      </div>
+      <div class="course">
+        <span class="course-label"><span class="course-side">Rコース</span>(左右鏡映)</span>
+        <svg id="plot-r" viewBox="0 0 510 510" role="img" aria-label="Rコース: Lコースを左右反転した5x5格子と線"></svg>
+      </div>
+    </div>
+    <div class="readout" id="readout"></div>
+    <div class="code-output" id="code-output">
+      <div class="code-row">
+        <span class="code-row-label">ゲート1</span>
+        <input type="text" class="code-row-value" id="code-set1" autocomplete="off" spellcheck="false" placeholder="例: 11,55">
+      </div>
+      <div class="code-row">
+        <span class="code-row-label">ゲート2/3</span>
+        <input type="text" class="code-row-value" id="code-set23" autocomplete="off" spellcheck="false" placeholder="例: 15,51/31,35">
+      </div>
+      <p class="code-hint">この欄に直接入力しても線をつなげます。形式: <code>列行,列行</code>(ゲート1)、<code>列行,列行/列行,列行</code>(ゲート2/3)</p>
+    </div>
+  </section>
+
+  <footer>ETラリーゲート座標確認 — G列-行のラベルで2点を結ぶ簡易ツール</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  const GRID_N = 5;
+  const MARGIN = 30;
+  const CELL = 90;
+  const CANVAS = MARGIN * 2 + CELL * GRID_N;
+  const DOT_R = 6;
+
+  const svgL = document.getElementById('plot-l');
+  const svgR = document.getElementById('plot-r');
+  const readout = document.getElementById('readout');
+  const codeSet1 = document.getElementById('code-set1');
+  const codeSet23 = document.getElementById('code-set23');
+
+  const sets = [
+    { a: document.getElementById('set-1a'), b: document.getElementById('set-1b'), color: 'var(--line-1)', name: 'ゲート1(赤)' },
+    { a: document.getElementById('set-2a'), b: document.getElementById('set-2b'), color: 'var(--line-2)', name: 'ゲート2(青)' },
+    { a: document.getElementById('set-3a'), b: document.getElementById('set-3b'), color: 'var(--line-3)', name: 'ゲート3(黄)' },
+  ];
+
+  const defaults = [['G1-1', 'G5-5'], ['G1-5', 'G5-1'], ['G3-1', 'G3-5']];
+  sets.forEach((s, i) => { s.a.value = defaults[i][0]; s.b.value = defaults[i][1]; });
+
+  // click-to-draw state (Lコースのみ): the first point clicked, waiting for a second
+  let pendingClick = null;
+  const drawStatus = document.getElementById('draw-status');
+  const MAX_GATES = 3;
+
+  function cellCenter(col, row) {
+    // col, row are 1-indexed, 1..GRID_N
+    return {
+      x: MARGIN + (col - 0.5) * CELL,
+      y: MARGIN + (row - 0.5) * CELL,
+    };
+  }
+
+  function mirrorCol(col) {
+    return GRID_N + 1 - col; // horizontal (left-right) mirror
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  const BAR_THICKNESS = 10;
+  const BAR_RADIUS = 3;
+
+  // a filled rounded rectangle connecting two points (rotated to match their angle)
+  function roundedBar(a, b, color) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+    const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+    const midX = (a.x + b.x) / 2;
+    const midY = (a.y + b.y) / 2;
+    return svgEl('rect', {
+      x: midX - length / 2,
+      y: midY - BAR_THICKNESS / 2,
+      width: length,
+      height: BAR_THICKNESS,
+      rx: BAR_RADIUS,
+      ry: BAR_RADIUS,
+      transform: `rotate(${angleDeg} ${midX} ${midY})`,
+      fill: color,
+      class: 'plot-bar',
+    });
+  }
+
+  function parseLabel(text) {
+    if (!text) return null;
+    const m = text.trim().toUpperCase().match(/^G([1-5])-([1-5])$/);
+    if (!m) return null;
+    return { col: parseInt(m[1], 10), row: parseInt(m[2], 10) };
+  }
+
+  function drawBase(targetSvg) {
+    targetSvg.innerHTML = '';
+    const g = svgEl('g', {});
+    targetSvg.appendChild(g);
+
+    for (let i = 0; i <= GRID_N; i++) {
+      const pos = MARGIN + i * CELL;
+      g.appendChild(svgEl('line', { x1: pos, y1: MARGIN, x2: pos, y2: MARGIN + CELL * GRID_N, class: 'grid-line' }));
+      g.appendChild(svgEl('line', { x1: MARGIN, y1: pos, x2: MARGIN + CELL * GRID_N, y2: pos, class: 'grid-line' }));
+    }
+    return g;
+  }
+
+  // draws one course (L = as entered, R = horizontally mirrored) into targetSvg,
+  // using the already-parsed gate points. When interactive, the L course's cells
+  // become clickable so two clicks draw a new gate directly on the grid.
+  function renderCourse(targetSvg, parsed, mirror, interactive) {
+    const g = drawBase(targetSvg);
+    const colOf = (col) => (mirror ? mirrorCol(col) : col);
+
+    // connecting bars (rounded rectangles) first, so dots/labels sit on top
+    parsed.forEach((p, i) => {
+      if (!p.a || !p.b) return;
+      const ca = cellCenter(colOf(p.a.col), p.a.row);
+      const cb = cellCenter(colOf(p.b.col), p.b.row);
+      g.appendChild(roundedBar(ca, cb, sets[i].color));
+    });
+
+    // highlight rings on endpoint dots used by a set
+    parsed.forEach((p, i) => {
+      if (!p.a || !p.b) return;
+      [p.a, p.b].forEach(pt => {
+        const c = cellCenter(colOf(pt.col), pt.row);
+        g.appendChild(svgEl('circle', {
+          cx: c.x, cy: c.y, r: DOT_R + 4, class: 'dot-ring', stroke: sets[i].color,
+        }));
+      });
+    });
+
+    // grid dots + labels on top (the grid layout itself keeps normal left-to-right
+    // columns; on the R course, only the printed label text is mirrored, so a gate's
+    // label still matches its original identity at its mirrored position)
+    for (let row = 1; row <= GRID_N; row++) {
+      for (let col = 1; col <= GRID_N; col++) {
+        const c = cellCenter(col, row);
+        g.appendChild(svgEl('circle', { cx: c.x, cy: c.y, r: DOT_R, class: 'dot' }));
+        const label = svgEl('text', {
+          x: c.x, y: c.y + DOT_R + 16, class: 'cell-label', 'text-anchor': 'middle',
+        });
+        label.textContent = `G${colOf(col)}-${row}`;
+        g.appendChild(label);
+
+        if (interactive) {
+          const hit = svgEl('circle', { cx: c.x, cy: c.y, r: DOT_R + 12, class: 'dot-hit' });
+          hit.addEventListener('click', () => handleCellClick(col, row));
+          g.appendChild(hit);
+        }
+      }
+    }
+
+    // ring around the point already clicked, waiting for its second point
+    if (interactive && pendingClick) {
+      const c = cellCenter(pendingClick.col, pendingClick.row);
+      g.appendChild(svgEl('circle', {
+        cx: c.x, cy: c.y, r: DOT_R + 4, class: 'dot-ring-pending',
+      }));
+    }
+  }
+
+  function nextEmptyGateIndex() {
+    return sets.findIndex(s => !s.a.value.trim() && !s.b.value.trim());
+  }
+
+  function updateDrawStatus() {
+    const filled = sets.filter(s => s.a.value.trim() && s.b.value.trim()).length;
+    if (pendingClick) {
+      drawStatus.textContent = `2点目をクリックしてください(ゲート${Math.min(filled + 1, MAX_GATES)}用)`;
+    } else if (filled >= MAX_GATES) {
+      drawStatus.textContent = `ゲート${MAX_GATES}本すべて設定済みです。新しく引くには下の「ゲート座標をリセット」を押してください。`;
+    } else {
+      drawStatus.textContent = `格子の点を2つクリックすると、ゲート${filled + 1}の線を引けます。`;
+    }
+  }
+
+  function handleCellClick(col, row) {
+    if (!pendingClick) {
+      pendingClick = { col, row };
+      updateDrawStatus();
+      render();
+      return;
+    }
+
+    if (pendingClick.col === col && pendingClick.row === row) {
+      // clicked the same point again: cancel the pending selection
+      pendingClick = null;
+      updateDrawStatus();
+      render();
+      return;
+    }
+
+    const idx = nextEmptyGateIndex();
+    if (idx === -1) {
+      pendingClick = null;
+      updateDrawStatus();
+      render();
+      return;
+    }
+
+    sets[idx].a.value = `G${pendingClick.col}-${pendingClick.row}`;
+    sets[idx].b.value = `G${col}-${row}`;
+    pendingClick = null;
+    render();
+    updateDrawStatus();
+  }
+
+  function render() {
+    readout.innerHTML = '';
+
+    const parsed = sets.map(s => ({ a: parseLabel(s.a.value), b: parseLabel(s.b.value) }));
+    parsed.forEach((p, i) => {
+      sets[i].a.classList.toggle('is-invalid', !!sets[i].a.value.trim() && !p.a);
+      sets[i].b.classList.toggle('is-invalid', !!sets[i].b.value.trim() && !p.b);
+    });
+
+    renderCourse(svgL, parsed, false, true);
+    renderCourse(svgR, parsed, true, false);
+
+    // readout rows
+    parsed.forEach((p, i) => {
+      const ok = !!(p.a && p.b);
+      const row = document.createElement('div');
+      row.className = 'readout-row' + (ok ? '' : ' is-empty');
+      const dot = document.createElement('span');
+      dot.className = 'readout-dot';
+      dot.style.background = ok ? sets[i].color : 'var(--border)';
+      const coords = document.createElement('span');
+      coords.className = 'readout-coords';
+      const len = document.createElement('span');
+      len.className = 'readout-len';
+
+      if (ok) {
+        const labelA = `G${p.a.col}-${p.a.row}`;
+        const labelB = `G${p.b.col}-${p.b.row}`;
+        coords.textContent = `${sets[i].name}  ${labelA} → ${labelB}`;
+        const cellDist = Math.hypot(p.b.col - p.a.col, p.b.row - p.a.row);
+        len.textContent = `${cellDist.toFixed(2)}マス分 (${(cellDist * 5).toFixed(1)}cm)`;
+      } else {
+        coords.textContent = `${sets[i].name}  未入力`;
+        len.textContent = '';
+      }
+
+      row.appendChild(dot);
+      row.appendChild(coords);
+      row.appendChild(len);
+      readout.appendChild(row);
+    });
+
+    // stripped-label output: "G1-1" -> "11" (remove G and hyphen), pair joined by comma
+    function strip(pt) { return `${pt.col}${pt.row}`; }
+    function pairCode(p) { return (p.a && p.b) ? `${strip(p.a)},${strip(p.b)}` : null; }
+
+    const codes = parsed.map(pairCode);
+
+    // only overwrite a code field's value while the user isn't actively typing in it
+    if (document.activeElement !== codeSet1) {
+      codeSet1.value = codes[0] || '';
+    }
+    if (document.activeElement !== codeSet23) {
+      codeSet23.value = (codes[1] || codes[2]) ? `${codes[1] || ''}/${codes[2] || ''}` : '';
+    }
+  }
+
+  // parse a single point code like "11" -> {col:1, row:1}
+  function parsePointCode(token) {
+    const m = token && token.trim().match(/^([1-5])([1-5])$/);
+    if (!m) return null;
+    return { col: parseInt(m[1], 10), row: parseInt(m[2], 10) };
+  }
+
+  // parse a gate code like "11,55" -> [{col,row}, {col,row}]
+  function parseGateCode(str) {
+    const parts = (str || '').split(',');
+    if (parts.length !== 2) return null;
+    const a = parsePointCode(parts[0]);
+    const b = parsePointCode(parts[1]);
+    if (!a || !b) return null;
+    return [a, b];
+  }
+
+  function applyGateCode(pts, gateIndex) {
+    sets[gateIndex].a.value = `G${pts[0].col}-${pts[0].row}`;
+    sets[gateIndex].b.value = `G${pts[1].col}-${pts[1].row}`;
+  }
+
+  codeSet1.addEventListener('input', () => {
+    const val = codeSet1.value.trim();
+    const parsed = parseGateCode(val);
+    codeSet1.classList.toggle('is-invalid', !!val && !parsed);
+    if (parsed) {
+      pendingClick = null;
+      applyGateCode(parsed, 0);
+      render();
+      updateDrawStatus();
+    }
+  });
+
+  codeSet23.addEventListener('input', () => {
+    const val = codeSet23.value.trim();
+    const parts = val.split('/');
+    let anyValid = false;
+    let anyInvalid = false;
+
+    if (parts.length === 2) {
+      const g2 = parseGateCode(parts[0]);
+      const g3 = parseGateCode(parts[1]);
+      if (parts[0].trim()) { g2 ? (anyValid = true) : (anyInvalid = true); }
+      if (parts[1].trim()) { g3 ? (anyValid = true) : (anyInvalid = true); }
+      if (g2) applyGateCode(g2, 1);
+      if (g3) applyGateCode(g3, 2);
+    } else if (val) {
+      anyInvalid = true;
+    }
+
+    codeSet23.classList.toggle('is-invalid', anyInvalid);
+    if (anyValid) {
+      pendingClick = null;
+      render();
+      updateDrawStatus();
+    }
+  });
+
+  sets.forEach(s => {
+    s.a.addEventListener('input', () => { pendingClick = null; render(); updateDrawStatus(); });
+    s.b.addEventListener('input', () => { pendingClick = null; render(); updateDrawStatus(); });
+  });
+  render();
+  updateDrawStatus();
+
+  const resetBtn = document.getElementById('reset-gates');
+  resetBtn.addEventListener('click', () => {
+    sets.forEach(s => { s.a.value = ''; s.b.value = ''; });
+    pendingClick = null;
+    render();
+    updateDrawStatus();
+  });
+
+  const exportBtn = document.getElementById('export-png');
+  function defaultPngFilename() {
+    const n = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `PTN${n}.png`;
+  }
+
+  exportBtn.addEventListener('click', () => {
+    if (typeof html2canvas === 'undefined') {
+      alert('PNG保存の機能を読み込めませんでした。インターネット接続を確認してください。');
+      return;
+    }
+
+    const input = window.prompt('保存するファイル名を入力してください(未入力の場合は PTNxxxx.png)', '');
+    let filename;
+    if (input === null) {
+      return; // user cancelled the dialog
+    } else if (!input.trim()) {
+      filename = defaultPngFilename();
+    } else {
+      filename = input.trim();
+      if (!/\.png$/i.test(filename)) filename += '.png';
+    }
+
+    exportBtn.disabled = true;
+    const originalLabel = exportBtn.textContent;
+    exportBtn.textContent = '保存中…';
+
+    const bg = getComputedStyle(document.body).backgroundColor;
+
+    html2canvas(document.querySelector('.page'), {
+      backgroundColor: bg,
+      scale: Math.max(2, window.devicePixelRatio || 1),
+      ignoreElements: (el) => el.id === 'export-png',
+    }).then((canvas) => {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }).catch((err) => {
+      console.error(err);
+      alert('PNGの保存に失敗しました。');
+    }).finally(() => {
+      exportBtn.disabled = false;
+      exportBtn.textContent = originalLabel;
+    });
+  });
+</script>
