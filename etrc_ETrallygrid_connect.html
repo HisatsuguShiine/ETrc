@@ -431,6 +431,25 @@
     font-size: 11.5px;
   }
 
+  .batch-output {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 16px;
+  }
+
+  #batch-input {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13.5px;
+    text-transform: none;
+  }
+
+  .batch-export-btn {
+    width: 100%;
+  }
+
   footer {
     text-align: center;
     font-size: 12px;
@@ -516,6 +535,13 @@
         <input type="text" class="code-row-value" id="code-set23" autocomplete="off" spellcheck="false" placeholder="例: 15,51/31,35">
       </div>
       <p class="code-hint">この欄に直接入力しても線をつなげます。形式: <code>列行,列行</code>(ゲート1)、<code>列行,列行/列行,列行</code>(ゲート2/3)</p>
+    </div>
+    <div class="batch-output">
+      <p class="code-row-label">一括入力して画像を保存</p>
+      <input type="text" id="batch-input" autocomplete="off" spellcheck="false" placeholder="例: PTN0001:11,55:15,51/31,35">
+      <button type="button" id="batch-export" class="export-btn batch-export-btn">この内容でPNG保存</button>
+      <p class="code-hint">形式: <code>ファイル名:ゲート1:ゲート2/3</code>(コロン区切り)。反映後、そのままPNG画像として保存します。</p>
+      <p class="draw-status" id="batch-status"></p>
     </div>
   </section>
 
@@ -851,6 +877,44 @@
     return `PTN${n}.png`;
   }
 
+  // captures the whole page as a PNG and downloads it as `filename`.
+  // `btn` (optional) is disabled with a "saving" label while the capture runs.
+  function exportPng(filename, btn) {
+    if (typeof html2canvas === 'undefined') {
+      alert('PNG保存の機能を読み込めませんでした。インターネット接続を確認してください。');
+      return Promise.resolve(false);
+    }
+
+    const originalLabel = btn ? btn.textContent : null;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '保存中…';
+    }
+
+    const bg = getComputedStyle(document.body).backgroundColor;
+
+    return html2canvas(document.querySelector('.page'), {
+      backgroundColor: bg,
+      scale: Math.max(2, window.devicePixelRatio || 1),
+      ignoreElements: (el) => el.id === 'export-png' || el.id === 'batch-export',
+    }).then((canvas) => {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      return true;
+    }).catch((err) => {
+      console.error(err);
+      alert('PNGの保存に失敗しました。');
+      return false;
+    }).finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    });
+  }
+
   exportBtn.addEventListener('click', () => {
     if (typeof html2canvas === 'undefined') {
       alert('PNG保存の機能を読み込めませんでした。インターネット接続を確認してください。');
@@ -868,27 +932,76 @@
       if (!/\.png$/i.test(filename)) filename += '.png';
     }
 
-    exportBtn.disabled = true;
-    const originalLabel = exportBtn.textContent;
-    exportBtn.textContent = '保存中…';
+    exportPng(filename, exportBtn);
+  });
 
-    const bg = getComputedStyle(document.body).backgroundColor;
+  // batch input: "ファイル名:ゲート1:ゲート2/3" -> applies the gate codes, then saves a PNG
+  const batchInput = document.getElementById('batch-input');
+  const batchExportBtn = document.getElementById('batch-export');
+  const batchStatus = document.getElementById('batch-status');
 
-    html2canvas(document.querySelector('.page'), {
-      backgroundColor: bg,
-      scale: Math.max(2, window.devicePixelRatio || 1),
-      ignoreElements: (el) => el.id === 'export-png',
-    }).then((canvas) => {
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }).catch((err) => {
-      console.error(err);
-      alert('PNGの保存に失敗しました。');
-    }).finally(() => {
-      exportBtn.disabled = false;
-      exportBtn.textContent = originalLabel;
+  function parseBatchString(str) {
+    const parts = str.split(':');
+    if (parts.length !== 3) return null;
+    return {
+      filenamePart: parts[0].trim(),
+      gate1Part: parts[1].trim(),
+      gate23Part: parts[2].trim(),
+    };
+  }
+
+  batchExportBtn.addEventListener('click', () => {
+    const parts = parseBatchString(batchInput.value);
+    if (!parts) {
+      batchInput.classList.add('is-invalid');
+      batchStatus.textContent = '形式が正しくありません。「ファイル名:ゲート1:ゲート2/3」のようにコロンで区切って入力してください。';
+      return;
+    }
+    batchInput.classList.remove('is-invalid');
+
+    let anyGateInvalid = false;
+
+    if (parts.gate1Part) {
+      const g1 = parseGateCode(parts.gate1Part);
+      if (g1) applyGateCode(g1, 0);
+      else anyGateInvalid = true;
+    }
+
+    if (parts.gate23Part) {
+      const g23 = parts.gate23Part.split('/');
+      if (g23.length === 2) {
+        const g2Text = g23[0].trim();
+        const g3Text = g23[1].trim();
+        if (g2Text) {
+          const g2 = parseGateCode(g2Text);
+          if (g2) applyGateCode(g2, 1); else anyGateInvalid = true;
+        }
+        if (g3Text) {
+          const g3 = parseGateCode(g3Text);
+          if (g3) applyGateCode(g3, 2); else anyGateInvalid = true;
+        }
+      } else {
+        anyGateInvalid = true;
+      }
+    }
+
+    pendingClick = null;
+    render();
+    updateDrawStatus();
+
+    let filename = parts.filenamePart;
+    if (!filename) filename = defaultPngFilename();
+    else if (!/\.png$/i.test(filename)) filename += '.png';
+
+    batchStatus.textContent = anyGateInvalid
+      ? 'ゲートの一部が形式に合わず反映されませんでした。それ以外の内容で画像を保存します…'
+      : '画像を保存しています…';
+
+    exportPng(filename, batchExportBtn).then((ok) => {
+      if (!ok) return;
+      batchStatus.textContent = anyGateInvalid
+        ? `一部のゲートは反映されませんでしたが、「${filename}」として保存しました。`
+        : `「${filename}」として保存しました。`;
     });
   });
 </script>
